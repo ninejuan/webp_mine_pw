@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스네이크 지뢰찾기</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        #game-container {
+            text-align: center;
+        }
+        #game-board {
+            display: inline-grid;
+            grid-template-columns: repeat(10, 30px);
+            grid-template-rows: repeat(10, 30px);
+            gap: 1px;
+            background-color: #ccc;
+            border: 1px solid #999;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+        }
+        .snake {
+            background-color: #4CAF50;
+        }
+        .mine {
+            background-color: #f44336;
+        }
+        .checked {
+            background-color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>스네이크 지뢰찾기</h1>
+        <div id="game-board"></div>
+        <p>방향키를 사용하여 뱀을 움직이세요. Space키를 눌러 지뢰를 찾아보세요.</p>
+        <p>Score: <span id="score">0</span> | 뱀의 길이: <span id="length">1</span></p>
+        <button onclick="startGame()">New Game</button>
+    </div>
+
+    <script>
+        const board = document.getElementById('game-board');
+        const scoreElement = document.getElementById('score');
+        const lengthElement = document.getElementById('length');
+        let snake = [{x: 0, y: 0}];
+        let direction = 'right';
+        let mines = [];
+        let score = 0;
+        let gameInterval;
+        let growthPending = 0;
+
+        function createBoard() {
+            board.innerHTML = '';
+            for (let i = 0; i < 100; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                board.appendChild(cell);
+            }
+        }
+
+        function placeMines() {
+            mines = [];
+            for (let i = 0; i < 20; i++) {
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * 10);
+                    y = Math.floor(Math.random() * 10);
+                } while (mines.some(mine => mine.x === x && mine.y === y));
+                mines.push({x, y});
+            }
+        }
+
+        function drawSnake() {
+            document.querySelectorAll('.snake').forEach(cell => cell.classList.remove('snake'));
+            snake.forEach(segment => {
+                const cell = board.children[segment.y * 10 + segment.x];
+                cell.classList.add('snake');
+            });
+        }
+
+        function moveSnake() {
+            const head = {...snake[0]};
+            switch (direction) {
+                case 'up': head.y--; break;
+                case 'down': head.y++; break;
+                case 'left': head.x--; break;
+                case 'right': head.x++; break;
+            }
+
+            if (head.x < 0 || head.x > 9 || head.y < 0 || head.y > 9 || snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                gameOver();
+                return;
+            }
+
+            snake.unshift(head);
+            if (growthPending > 0) {
+                growthPending--;
+            } else {
+                snake.pop();
+            }
+            drawSnake();
+            updateLength();
+        }
+
+        function checkCell() {
+            const head = snake[0];
+            const cell = board.children[head.y * 10 + head.x];
+            if (!cell.classList.contains('checked')) {
+                if (mines.some(mine => mine.x === head.x && mine.y === head.y)) {
+                    cell.classList.add('mine');
+                    gameOver();
+                } else {
+                    cell.classList.add('checked');
+                    score++;
+                    scoreElement.textContent = score;
+                    growthPending++;
+                    updateLength();
+                    if (snake.length >= 5) {
+                        winGame();
+                    }
+                }
+            }
+        }
+
+        function updateLength() {
+            lengthElement.textContent = snake.length + growthPending;
+        }
+
+        function gameOver() {
+            clearInterval(gameInterval);
+            alert(`${score}점을 넘기지 못하고 패배하였습니다.`);
+        }
+
+        function winGame() {
+            clearInterval(gameInterval);
+            alert(`축하합니다. ${score}점을 획득하여 승리하였습니다!`);
+        }
+
+        function startGame() {
+            createBoard();
+            placeMines();
+            snake = [{x: 0, y: 0}];
+            direction = 'right';
+            score = 0;
+            growthPending = 0;
+            scoreElement.textContent = score;
+            updateLength();
+            clearInterval(gameInterval);
+            gameInterval = setInterval(moveSnake, 200);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            e.preventDefault();
+            switch (e.key) {
+                case 'ArrowUp': if (direction !== 'down') direction = 'up'; break;
+                case 'ArrowDown': if (direction !== 'up') direction = 'down'; break;
+                case 'ArrowLeft': if (direction !== 'right') direction = 'left'; break;
+                case 'ArrowRight': if (direction !== 'left') direction = 'right'; break;
+                case ' ': checkCell(); break;
+            }
+        });
+    </script>
+</body>
+</html>
