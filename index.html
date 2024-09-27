@@ -1,219 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- 페이지의 메타 정보 정의 -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>스네이크 지뢰찾기</title>
     <style>
+        /* 페이지 전체 레이아웃 설정 */
         body {
-            display: flex;
+            display: flex; /* 중앙 정렬을 위해 Flexbox 사용 */
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            height: 100vh; /* 세로로 100% 화면 사용 */
             margin: 0;
             font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
+            background-color: #f0f0f0; /* 배경색 */
         }
         #game-container {
-            text-align: center;
+            text-align: center; /* 게임 컨테이너 내부 요소를 중앙 정렬 */
         }
         #game-board {
-            display: inline-grid;
-            grid-template-columns: repeat(10, 30px);
+            display: inline-grid; /* 격자 레이아웃 사용 */
+            grid-template-columns: repeat(10, 30px); /* 10x10 크기의 셀 */
             grid-template-rows: repeat(10, 30px);
-            gap: 1px;
-            background-color: #ccc;
-            border: 1px solid #999;
-            position: relative;
+            gap: 1px; /* 셀 간격 */
+            background-color: #ccc; /* 게임판 배경색 */
+            border: 1px solid #999; /* 게임판 테두리 */
+            position: relative; /* 확률 숫자 위치 조정용 */
         }
         .cell {
             width: 30px;
             height: 30px;
-            background-color: #fff;
-            border: 1px solid #ccc;
+            background-color: #fff; /* 기본 셀 색상 */
+            border: 1px solid #ccc; /* 셀 테두리 */
         }
         .snake {
-            background-color: #4caf50;
+            background-color: #4caf50; /* 뱀의 색상 */
         }
         .mine {
-            background-color: #f44336;
+            background-color: #f44336; /* 지뢰의 색상 */
         }
         .checked {
-            background-color: #2196f3;
+            background-color: #2196f3; /* 확인된 안전한 셀 색상 */
         }
         .probability {
-            position: absolute;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
-            text-shadow: 1px 1px 1px black;
+            position: absolute; /* 확률 표시 위치 조정 */
+            font-size: 12px; /* 글씨 크기 */
+            font-weight: bold; /* 굵은 글씨 */
+            color: white; /* 글씨 색상 */
+            text-shadow: 1px 1px 1px black; /* 글씨 그림자 */
         }
     </style>
 </head>
 <body>
     <div id="game-container">
+        <!-- 게임 제목과 설명 -->
         <h1>스네이크 지뢰찾기</h1>
         <p>지뢰를 피해 20개의 안전 구역을 찾아보세요!</p>
+        <!-- 게임판이 표시될 영역 -->
         <div id="game-board"></div>
+        <!-- 게임 설명 및 점수 정보 -->
         <p>방향키를 사용하여 뱀을 움직이세요. Space키를 눌러 지뢰를 찾아보세요.</p>
         <p>Score: <span id="score">0</span> | 뱀의 길이: <span id="length">1</span> | 지뢰의 갯수: <span id="mine_count">20</span></p>
+        <!-- 새로운 게임 시작 버튼 -->
         <button onclick="startGame()">New Game</button>
     </div>
 
     <script>
+        // DOM 요소 선택 및 게임 상태 변수 선언
         const board = document.getElementById("game-board");
         const scoreElement = document.getElementById("score");
         const lengthElement = document.getElementById("length");
-        let snake = [{ x: 0, y: 0 }];
-        let direction = "right";
-        let mines = [];
-        let score = 0;
-        let gameInterval;
-        let growthPending = 0;
+        let snake = [{ x: 0, y: 0 }]; // 뱀의 초기 위치
+        let direction = "right"; // 초기 방향 설정
+        let mines = []; // 지뢰 배열
+        let score = 0; // 점수
+        let gameInterval; // 게임 루프를 위한 인터벌 변수
+        let growthPending = 0; // 뱀이 자라날 때까지 남은 칸수
 
+        // 게임판 생성 함수
         function createBoard() {
-            board.innerHTML = "";
-            for (let i = 0; i < 100; i++) {
+            board.innerHTML = ""; // 기존 보드를 비움
+            for (let i = 0; i < 100; i++) { // 10x10 보드 생성
                 const cell = document.createElement("div");
-                cell.classList.add("cell");
+                cell.classList.add("cell"); // 각 셀에 class "cell" 추가
                 board.appendChild(cell);
             }
         }
 
+        // 지뢰 배치 함수
         function placeMines() {
-            mines = [];
-            for (let i = 0; i < 20; i++) {
+            mines = []; // 지뢰 배열 초기화
+            for (let i = 0; i < 20; i++) { // 20개의 지뢰 배치
                 let x, y;
                 do {
-                    x = Math.floor(Math.random() * 10);
-                    y = Math.floor(Math.random() * 10);
-                } while (mines.some((mine) => mine.x === x && mine.y === y));
-                mines.push({ x, y });
+                    x = Math.floor(Math.random() * 10); // x 좌표 랜덤 설정
+                    y = Math.floor(Math.random() * 10); // y 좌표 랜덤 설정
+                } while (mines.some((mine) => mine.x === x && mine.y === y)); // 중복 지뢰 방지
+                mines.push({ x, y }); // 지뢰 배열에 추가
             }
         }
 
+        // 뱀 그리기 함수
         function drawSnake() {
-            document.querySelectorAll(".snake").forEach((cell) => cell.classList.remove("snake"));
+            document.querySelectorAll(".snake").forEach((cell) => cell.classList.remove("snake")); // 기존 뱀을 제거
             snake.forEach((segment) => {
-                const cell = board.children[segment.y * 10 + segment.x];
+                const cell = board.children[segment.y * 10 + segment.x]; // 뱀의 각 세그먼트 위치에 셀 추가
                 cell.classList.add("snake");
             });
         }
 
+        // 뱀 이동 함수
         function moveSnake() {
-            const head = { ...snake[0] };
-            switch (direction) {
+            const head = { ...snake[0] }; // 현재 머리 위치 복사
+            switch (direction) { // 방향에 따라 머리 이동
                 case "up": head.y--; break;
                 case "down": head.y++; break;
                 case "left": head.x--; break;
                 case "right": head.x++; break;
             }
 
+            // 벽 충돌 및 자기 몸과 충돌 체크
             if (head.x < 0 || head.x > 9 || head.y < 0 || head.y > 9 ||
                 snake.some((segment) => segment.x === head.x && segment.y === head.y)) {
-                gameOver();
+                gameOver(); // 게임 종료
                 return;
             }
 
-            snake.unshift(head);
+            snake.unshift(head); // 새로운 머리 위치로 뱀 갱신
             if (growthPending > 0) {
-                growthPending--;
+                growthPending--; // 자라날 칸수가 있으면 하나 줄임
             } else {
-                snake.pop();
+                snake.pop(); // 아니면 꼬리 제거
             }
-            drawSnake();
-            updateLength();
+            drawSnake(); // 뱀 다시 그림
+            updateLength(); // 길이 업데이트
         }
 
+        // 셀 주변 지뢰 확률 표시 함수
         function updateProbabilities() {
-            document.querySelectorAll('.probability').forEach(el => el.remove());
-            document.querySelectorAll('.checked').forEach(cell => {
-                const index = Array.from(board.children).indexOf(cell);
+            document.querySelectorAll('.probability').forEach(el => el.remove()); // 기존 확률 표시 제거
+            document.querySelectorAll('.checked').forEach(cell => { // 확인된 셀마다
+                const index = Array.from(board.children).indexOf(cell); // 셀의 인덱스 계산
                 const x = index % 10;
                 const y = Math.floor(index / 10);
                 let count = 0;
-                
+
+                // 주변 8칸의 지뢰 갯수를 계산
                 for (let dx = -1; dx <= 1; dx++) {
                     for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
+                        if (dx === 0 && dy === 0) continue; // 자기 자신은 제외
                         const nx = x + dx;
                         const ny = y + dy;
                         if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10) {
                             if (mines.some(mine => mine.x === nx && mine.y === ny)) {
-                                count++;
+                                count++; // 주변 지뢰 갯수 카운트
                             }
                         }
                     }
                 }
 
+                // 주변에 지뢰가 있으면 확률을 표시
                 if (count > 0) {
                     const prob = document.createElement('div');
                     prob.classList.add('probability');
                     prob.textContent = count;
-                    prob.style.left = `${x * 31 + 15}px`;
-                    prob.style.top = `${y * 31 + 15}px`;
-                    board.appendChild(prob);
+                    prob.style.left = `${x * 31 + 15}px`; // x좌표 위치 조정
+                    prob.style.top = `${y * 31 + 15}px`; // y좌표 위치 조정
+                    board.appendChild(prob); // 게임판에 추가
                 }
             });
         }
 
+        // 현재 셀 체크 (확인된 안전한 칸 표시)
         function checkCell() {
-            const head = snake[0];
-            const cell = board.children[head.y * 10 + head.x];
-            if (!cell.classList.contains("checked")) {
-                if (mines.some((mine) => mine.x === head.x && mine.y === head.y)) {
-                    cell.classList.add("mine");
-                    gameOver();
+            const head = snake[0]; // 현재 머리 위치
+            const cell = board.children[head.y * 10 + head.x]; // 머리 위치의 셀 선택
+            if (!cell.classList.contains("checked")) { // 이미 체크되지 않은 셀인 경우
+                if (mines.some((mine) => mine.x === head.x && mine.y === head.y)) { // 지뢰 여부 확인
+                    cell.classList.add("mine"); // 지뢰 표시
+                    gameOver(); // 게임 종료
                 } else {
-                    cell.classList.add("checked");
-                    score++;
+                    cell.classList.add("checked"); // 안전한 칸으로 표시
+                    score++; // 점수 증가
                     scoreElement.textContent = score;
-                    growthPending++;
-                    updateLength();
-                    updateProbabilities();
-                    if (snake.length >= 20) {
+                    growthPending++; // 뱀이 자라날 칸수 증가
+                    updateLength(); // 길이 업데이트
+                    updateProbabilities(); // 주변 확률 업데이트
+                    if (snake.length >= 20) { // 승리 조건 체크
                         winGame();
                     }
                 }
             }
         }
 
+        // 뱀 길이 업데이트
         function updateLength() {
-            lengthElement.textContent = snake.length + growthPending;
+            lengthElement.textContent = snake.length + growthPending; // 현재 뱀 길이 출력
         }
 
+        // 게임 종료 함수
         function gameOver() {
-            clearInterval(gameInterval);
-            alert(`${score}점을 넘기지 못하고 패배하였습니다.`);
+            clearInterval(gameInterval); // 게임 루프 종료
+            alert(`${score}점을 넘기지 못하고 패배하였습니다.`); // 패배 메시지
         }
 
+        // 승리 함수
         function winGame() {
-            clearInterval(gameInterval);
-            alert(`축하합니다. ${score}점을 획득하여 승리하였습니다!`);
+            clearInterval(gameInterval); // 게임 루프 종료
+            alert(`축하합니다. ${score}점을 획득하여 승리하였습니다!`); // 승리 메시지
         }
 
+        // 새로운 게임 시작 함수
         function startGame() {
-            createBoard();
-            placeMines();
-            snake = [{ x: 0, y: 0 }];
-            direction = "right";
-            score = 0;
-            growthPending = 0;
-            scoreElement.textContent = score;
-            updateLength();
-            clearInterval(gameInterval);
-            gameInterval = setInterval(moveSnake, 200);
-            document.querySelectorAll('.probability').forEach(el => el.remove());
+            createBoard(); // 게임판 생성
+            placeMines(); // 지뢰 배치
+            snake = [{ x: 0, y: 0 }]; // 뱀 초기화
+            direction = "right"; // 방향 초기화
+            score = 0; // 점수 초기화
+            growthPending = 0; // 자라날 칸수 초기화
+            scoreElement.textContent = score; // 점수 출력
+            updateLength(); // 길이 업데이트
+            clearInterval(gameInterval); // 이전 게임 루프 종료
+            gameInterval = setInterval(moveSnake, 200); // 200ms 간격으로 뱀 이동
+            document.querySelectorAll('.probability').forEach(el => el.remove()); // 기존 확률 표시 제거
         }
 
+        // 키보드 이벤트 리스너 (방향키 및 스페이스바 동작)
         document.addEventListener("keydown", (e) => {
-            e.preventDefault();
+            e.preventDefault(); // 기본 키보드 동작 방지
             switch (e.key) {
-                case "ArrowUp": if (direction !== "down") direction = "up"; break;
-                case "ArrowDown": if (direction !== "up") direction = "down"; break;
-                case "ArrowLeft": if (direction !== "right") direction = "left"; break;
-                case "ArrowRight": if (direction !== "left") direction = "right"; break;
-                case " ": checkCell(); break;
+                case "ArrowUp": if (direction !== "down") direction = "up"; break; // 위쪽 방향
+                case "ArrowDown": if (direction !== "up") direction = "down"; break; // 아래쪽 방향
+                case "ArrowLeft": if (direction !== "right") direction = "left"; break; // 왼쪽 방향
+                case "ArrowRight": if (direction !== "left") direction = "right"; break; // 오른쪽 방향
+                case " ": checkCell(); break; // 스페이스바로 셀 확인
             }
         });
     </script>
